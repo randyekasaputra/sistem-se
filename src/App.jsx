@@ -165,14 +165,14 @@ export default function App() {
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-200 shrink-0"><Wallet className="text-white w-5 h-5" /></div>
                 Pengeluaran Rutin (Bulanan)
               </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <div className="grid grid-cols-2 gap-3 sm:gap-5">
                 <div><label className={labelClass}>Listrik</label><input type="number" name="electricity" value={formData.electricity} onChange={handleChange} className={inputClass} /></div>
                 <div><label className={labelClass}>WiFi / Paket Data</label><input type="number" name="wifi" value={formData.wifi} onChange={handleChange} className={inputClass} /></div>
                 <div><label className={labelClass}>LPG</label><input type="number" name="lpg" value={formData.lpg} onChange={handleChange} className={inputClass} /></div>
                 <div><label className={labelClass}>Arisan (Per Minggu)</label><input type="number" name="arisan" value={formData.arisan} onChange={handleChange} className={inputClass} /></div>
                 <div><label className={labelClass}>SPP Anak</label><input type="number" name="spp" value={formData.spp} onChange={handleChange} className={inputClass} /></div>
                 <div><label className={labelClass}>Uang Saku (Per Hari)</label><input type="number" name="pocketMoneyDaily" value={formData.pocketMoneyDaily} onChange={handleChange} className={inputClass} /></div>
-                <div className="sm:col-span-2"><label className={labelClass}>Bensin (Per Minggu)</label><input type="number" name="gasWeekly" value={formData.gasWeekly} onChange={handleChange} className={inputClass} /></div>
+                <div className="col-span-2"><label className={labelClass}>Bensin (Per Minggu)</label><input type="number" name="gasWeekly" value={formData.gasWeekly} onChange={handleChange} className={inputClass} /></div>
               </div>
               <div className={subBoxClass}>
                 <div className={subTextClass}><span>Total Rutin Bulanan</span><span className={subValueClass}>Rp {getMonthlyRoutine().toLocaleString('id-ID')}</span></div>
