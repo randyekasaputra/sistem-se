@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply antialiased text-slate-800 bg-slate-50 min-h-screen selection:bg-indigo-200 selection:text-indigo-900;
+  }
+}
+
+/* Custom background for a modern Gen Z aesthetic (Glassmorphism & Mesh Gradients) */
+.bg-mesh {
+  background-color: #f8fafc;
+  background-image: 
+    radial-gradient(at 0% 0%, hsla(253,16%,7%,0.03) 0px, transparent 50%),
+    radial-gradient(at 50% 0%, hsla(225,39%,30%,0.03) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, hsla(339,49%,30%,0.03) 0px, transparent 50%),
+    radial-gradient(at 0% 100%, hsla(242,100%,70%,0.08) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, hsla(343,100%,76%,0.08) 0px, transparent 50%);
+  background-attachment: fixed;
+}
