@@ -83,41 +83,43 @@ export default function App() {
   const neraca = totalPemasukanTahunan - totalPengeluaranKeseluruhan;
 
   const handleDownload = () => {
-    let csv = "LAPORAN SENSUS EKONOMI TERPADU\n\n";
-    csv += "--- INFORMASI UMUM ---\n";
-    csv += `Anggota Keluarga (Bekerja),${formData.workers.map(w => w.name || 'Tanpa Nama').join(' & ')}\n`;
-    csv += `Sektor Usaha,${formData.businessType}\n\n`;
+    let csv = "LAPORAN SENSUS EKONOMI TERPADU;\n\n";
+    csv += "KATEGORI;NILAI\n";
+    csv += "--- INFORMASI UMUM ---;\n";
+    csv += `Anggota Keluarga (Bekerja);${formData.workers.map(w => w.name || 'Tanpa Nama').join(' & ')}\n`;
+    csv += `Sektor Usaha;${formData.businessType}\n\n`;
 
-    csv += "--- RINCIAN PEMASUKAN TAHUNAN ---\n";
+    csv += "--- RINCIAN PEMASUKAN TAHUNAN ---;\n";
     formData.workers.forEach((w, idx) => {
       const amount = parseNum(w.salaryAmount);
       let annual = amount;
       if (w.salaryType === 'Harian') annual = amount * 24 * 12;
       else if (w.salaryType === 'Mingguan') annual = amount * 4 * 12;
       else annual = amount * 12;
-      csv += `Gaji ${w.name || `Anggota ${idx + 1}`} (${w.salaryType}),${annual}\n`;
+      csv += `Gaji ${w.name || `Anggota ${idx + 1}`} (${w.salaryType});${annual}\n`;
     });
-    csv += `Total Gaji Tahunan Keluarga,${annualIncome}\n`;
+    csv += `Total Gaji Tahunan Keluarga;${annualIncome}\n`;
     if (formData.businessType !== 'Tidak Ada') {
-      csv += `Total Omset Usaha Tahunan,${businessData.annualOmset}\n`;
+      csv += `Total Omset Usaha Tahunan;${businessData.annualOmset}\n`;
     }
-    csv += `>>> TOTAL PEMASUKAN KOTOR,${totalPemasukanTahunan}\n\n`;
+    csv += `TOTAL PEMASUKAN KOTOR;${totalPemasukanTahunan}\n\n`;
 
-    csv += "--- RINCIAN PENGELUARAN TAHUNAN ---\n";
-    csv += `Total Pengeluaran Rutin & Pribadi,${getAnnualPersonal()}\n`;
+    csv += "--- RINCIAN PENGELUARAN TAHUNAN ---;\n";
+    csv += `Total Pengeluaran Rutin & Pribadi;${getAnnualPersonal()}\n`;
     if (formData.businessType !== 'Tidak Ada') {
-      csv += `Total Biaya Operasional & Produksi Usaha,${businessData.annualExpense}\n`;
+      csv += `Total Biaya Operasional & Produksi Usaha;${businessData.annualExpense}\n`;
     }
-    csv += `>>> TOTAL PENGELUARAN KESELURUHAN,${totalPengeluaranKeseluruhan}\n\n`;
+    csv += `TOTAL PENGELUARAN KESELURUHAN;${totalPengeluaranKeseluruhan}\n\n`;
 
-    csv += "--- CATATAN TAMBAHAN ---\n";
-    csv += `Konsumsi Mingguan (Makan & Rokok),${getWeeklyConsumption()}\n\n`;
+    csv += "--- CATATAN TAMBAHAN ---;\n";
+    csv += `Konsumsi Mingguan (Makan & Rokok);${getWeeklyConsumption()}\n\n`;
 
-    csv += "--- HASIL NERACA ---\n";
-    csv += `STATUS NERACA,${neraca >= 0 ? 'SURPLUS (UNTUNG)' : 'DEFISIT (RUGI)'}\n`;
-    csv += `TOTAL BERSIH (NETTO),${neraca}\n`;
+    csv += "--- HASIL NERACA ---;\n";
+    csv += `STATUS NERACA;${neraca >= 0 ? 'SURPLUS (UNTUNG)' : 'DEFISIT (RUGI)'}\n`;
+    csv += `TOTAL BERSIH (NETTO);${neraca}\n`;
 
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    // Tambahkan BOM agar Excel mendeteksi UTF-8 dengan benar
+    const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
