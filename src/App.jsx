@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronRight, ChevronLeft, Download, RotateCcw, BadgeCheck, Coffee, Wallet, Landmark, Store, PieChart, Layers } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Download, RotateCcw, BadgeCheck, Coffee, Wallet, Landmark, Store, PieChart, Layers, Plus, Trash2 } from 'lucide-react';
 
 const initialState = {
-  name: '', salaryType: 'Bulanan', salaryAmount: '',
+  workers: [{ id: 1, name: '', salaryType: 'Bulanan', salaryAmount: '' }],
   dailyFood: '', dailyCigarette: '',
   electricity: '', wifi: '', lpg: '', arisan: '', spp: '', pocketMoneyDaily: '', gasWeekly: '',
   motorcycleTax: '', carTax: '', ukt: '',
@@ -20,16 +20,26 @@ export default function App() {
   const handleNext = () => step < totalSteps && setStep(step + 1);
   const handlePrev = () => step > 1 && setStep(step - 1);
   const handleChange = (e) => setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+  const handleWorkerChange = (id, field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      workers: prev.workers.map(w => w.id === id ? { ...w, [field]: value } : w)
+    }));
+  };
+  const addWorker = () => setFormData(prev => ({ ...prev, workers: [...prev.workers, { id: Date.now(), name: '', salaryType: 'Bulanan', salaryAmount: '' }] }));
+  const removeWorker = (id) => setFormData(prev => ({ ...prev, workers: prev.workers.filter(w => w.id !== id) }));
   const handleReset = () => { setFormData(initialState); setStep(1); };
 
   const parseNum = (val) => Number(val) || 0;
 
   // Step 1
   const getMonthlySalary = () => {
-    const amount = parseNum(formData.salaryAmount);
-    if (formData.salaryType === 'Harian') return amount * 24;
-    if (formData.salaryType === 'Mingguan') return amount * 4;
-    return amount;
+    return formData.workers.reduce((total, w) => {
+      const amount = parseNum(w.salaryAmount);
+      if (w.salaryType === 'Harian') return total + (amount * 24);
+      if (w.salaryType === 'Mingguan') return total + (amount * 4);
+      return total + amount;
+    }, 0);
   };
   const annualIncome = getMonthlySalary() * 12;
 
@@ -68,23 +78,50 @@ export default function App() {
 
   const businessData = getBusinessFinancials();
   const totalPemasukanTahunan = annualIncome + businessData.annualOmset;
-  const totalPengeluaranKeseluruhan = annualConsumption + getAnnualPersonal() + businessData.annualExpense;
+  // Sesuai instruksi: Pengeluaran Tahunan = (Bulanan * 12) + Pajak Motor + Mobil + UKT + Pengeluaran Usaha (Tanpa Konsumsi Mingguan)
+  const totalPengeluaranKeseluruhan = getAnnualPersonal() + businessData.annualExpense;
   const neraca = totalPemasukanTahunan - totalPengeluaranKeseluruhan;
 
   const handleDownload = () => {
-    const csvContent = "data:text/csv;charset=utf-8,Kategori,Nilai\n" +
-      `Nama,${formData.name}\n` +
-      `Pemasukan Gaji Tahunan,${annualIncome}\n` +
-      `Konsumsi Tahunan,${annualConsumption}\n` +
-      `Pengeluaran Pribadi Tahunan,${getAnnualPersonal()}\n` +
-      `Omset Usaha Tahunan,${businessData.annualOmset}\n` +
-      `Pengeluaran Usaha Tahunan,${businessData.annualExpense}\n` +
-      `TOTAL PEMASUKAN,${totalPemasukanTahunan}\n` +
-      `TOTAL PENGELUARAN,${totalPengeluaranKeseluruhan}\n` +
-      `NERACA (SURPLUS/DEFISIT),${neraca}\n`;
+    let csv = "LAPORAN SENSUS EKONOMI TERPADU\n\n";
+    csv += "--- INFORMASI UMUM ---\n";
+    csv += `Anggota Keluarga (Bekerja),${formData.workers.map(w => w.name || 'Tanpa Nama').join(' & ')}\n`;
+    csv += `Sektor Usaha,${formData.businessType}\n\n`;
+
+    csv += "--- RINCIAN PEMASUKAN TAHUNAN ---\n";
+    formData.workers.forEach((w, idx) => {
+      const amount = parseNum(w.salaryAmount);
+      let annual = amount;
+      if (w.salaryType === 'Harian') annual = amount * 24 * 12;
+      else if (w.salaryType === 'Mingguan') annual = amount * 4 * 12;
+      else annual = amount * 12;
+      csv += `Gaji ${w.name || `Anggota ${idx + 1}`} (${w.salaryType}),${annual}\n`;
+    });
+    csv += `Total Gaji Tahunan Keluarga,${annualIncome}\n`;
+    if (formData.businessType !== 'Tidak Ada') {
+      csv += `Total Omset Usaha Tahunan,${businessData.annualOmset}\n`;
+    }
+    csv += `>>> TOTAL PEMASUKAN KOTOR,${totalPemasukanTahunan}\n\n`;
+
+    csv += "--- RINCIAN PENGELUARAN TAHUNAN ---\n";
+    csv += `Total Pengeluaran Rutin & Pribadi,${getAnnualPersonal()}\n`;
+    if (formData.businessType !== 'Tidak Ada') {
+      csv += `Total Biaya Operasional & Produksi Usaha,${businessData.annualExpense}\n`;
+    }
+    csv += `>>> TOTAL PENGELUARAN KESELURUHAN,${totalPengeluaranKeseluruhan}\n\n`;
+
+    csv += "--- CATATAN TAMBAHAN ---\n";
+    csv += `Konsumsi Mingguan (Makan & Rokok),${getWeeklyConsumption()}\n\n`;
+
+    csv += "--- HASIL NERACA ---\n";
+    csv += `STATUS NERACA,${neraca >= 0 ? 'SURPLUS (UNTUNG)' : 'DEFISIT (RUGI)'}\n`;
+    csv += `TOTAL BERSIH (NETTO),${neraca}\n`;
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    link.setAttribute("href", encodeURI(csvContent));
-    link.setAttribute("download", "hasil_sensus_ekonomi.csv");
+    link.setAttribute("href", url);
+    link.setAttribute("download", "Laporan_Sensus_Ekonomi.csv");
     document.body.appendChild(link); link.click(); document.body.removeChild(link);
   };
 
@@ -127,10 +164,28 @@ export default function App() {
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-200 shrink-0"><BadgeCheck className="text-white w-5 h-5" /></div>
                 Profil & Pemasukan
               </h2>
-              <div className="space-y-5">
-                <div><label className={labelClass}>Nama Lengkap</label><input type="text" name="name" value={formData.name} onChange={handleChange} className={inputClass} placeholder="Masukkan nama Anda" /></div>
-                <div><label className={labelClass}>Tipe Gaji</label><select name="salaryType" value={formData.salaryType} onChange={handleChange} className={inputClass}><option>Harian</option><option>Mingguan</option><option>Bulanan</option></select></div>
-                <div><label className={labelClass}>Nominal Gaji</label><input type="number" name="salaryAmount" value={formData.salaryAmount} onChange={handleChange} className={inputClass} placeholder="Contoh: 3000000" /></div>
+              <div className="space-y-6">
+                {formData.workers.map((worker, index) => (
+                  <div key={worker.id} className="p-5 border border-slate-200 bg-slate-50 rounded-2xl relative">
+                    {formData.workers.length > 1 && (
+                      <button onClick={() => removeWorker(worker.id)} className="absolute top-4 right-4 text-rose-500 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 p-2 rounded-lg transition-all">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                    <h3 className="font-bold text-slate-700 mb-4">Anggota Keluarga {index + 1}</h3>
+                    <div className="space-y-4">
+                      <div><label className={labelClass}>Nama Lengkap</label><input type="text" value={worker.name} onChange={(e) => handleWorkerChange(worker.id, 'name', e.target.value)} className={inputClass} placeholder="Nama Anggota" /></div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div><label className={labelClass}>Tipe Gaji</label><select value={worker.salaryType} onChange={(e) => handleWorkerChange(worker.id, 'salaryType', e.target.value)} className={inputClass}><option>Harian</option><option>Mingguan</option><option>Bulanan</option></select></div>
+                        <div><label className={labelClass}>Nominal Gaji</label><input type="number" value={worker.salaryAmount} onChange={(e) => handleWorkerChange(worker.id, 'salaryAmount', e.target.value)} className={inputClass} placeholder="Nominal" /></div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                
+                <button onClick={addWorker} className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-indigo-200 text-indigo-600 font-semibold rounded-2xl hover:bg-indigo-50 hover:border-indigo-300 transition-all">
+                  <Plus className="w-5 h-5" /> Tambah Anggota Keluarga
+                </button>
               </div>
               <div className={subBoxClass}>
                 <div className={subTextClass}><span>Gaji Bulanan</span><span className={subValueClass}>Rp {getMonthlySalary().toLocaleString('id-ID')}</span></div>
@@ -280,9 +335,9 @@ export default function App() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
                 <div className="bg-slate-50 border border-slate-200 p-5 rounded-2xl"><div className="text-xs font-bold text-slate-500 uppercase mb-1">Gaji Tahunan</div><div className="text-xl font-extrabold text-slate-800">Rp {annualIncome.toLocaleString('id-ID')}</div></div>
                 <div className="bg-slate-50 border border-slate-200 p-5 rounded-2xl"><div className="text-xs font-bold text-slate-500 uppercase mb-1">Omset Usaha</div><div className="text-xl font-extrabold text-emerald-600">Rp {businessData.annualOmset.toLocaleString('id-ID')}</div></div>
-                <div className="bg-slate-50 border border-slate-200 p-5 rounded-2xl"><div className="text-xs font-bold text-slate-500 uppercase mb-1">Konsumsi</div><div className="text-xl font-extrabold text-rose-600">Rp {annualConsumption.toLocaleString('id-ID')}</div></div>
-                <div className="bg-slate-50 border border-slate-200 p-5 rounded-2xl"><div className="text-xs font-bold text-slate-500 uppercase mb-1">Rutin Pribadi</div><div className="text-xl font-extrabold text-rose-600">Rp {getAnnualPersonal().toLocaleString('id-ID')}</div></div>
-                <div className="bg-slate-50 border border-slate-200 p-5 rounded-2xl sm:col-span-2"><div className="text-xs font-bold text-slate-500 uppercase mb-1">Pengeluaran Usaha</div><div className="text-xl font-extrabold text-rose-600">Rp {businessData.annualExpense.toLocaleString('id-ID')}</div></div>
+                <div className="bg-slate-50 border border-slate-200 p-5 rounded-2xl"><div className="text-xs font-bold text-slate-500 uppercase mb-1">Rutin Pribadi (Tahunan)</div><div className="text-xl font-extrabold text-rose-600">Rp {getAnnualPersonal().toLocaleString('id-ID')}</div></div>
+                <div className="bg-slate-50 border border-slate-200 p-5 rounded-2xl"><div className="text-xs font-bold text-slate-500 uppercase mb-1">Pengeluaran Usaha</div><div className="text-xl font-extrabold text-rose-600">Rp {businessData.annualExpense.toLocaleString('id-ID')}</div></div>
+                <div className="bg-slate-50 border border-slate-200 p-5 rounded-2xl sm:col-span-2"><div className="text-xs font-bold text-slate-500 uppercase mb-1">Konsumsi Mingguan (Tidak Masuk Neraca)</div><div className="text-xl font-extrabold text-slate-600">Rp {getWeeklyConsumption().toLocaleString('id-ID')}</div></div>
               </div>
 
               <div className={`p-6 rounded-3xl mb-8 ${neraca >= 0 ? 'bg-gradient-to-br from-emerald-500 to-teal-600' : 'bg-gradient-to-br from-rose-500 to-red-600'} text-white shadow-xl`}>
