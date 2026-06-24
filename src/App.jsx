@@ -6,7 +6,7 @@ const initialState = {
   workers: [{ id: 1, name: '', salaryType: 'Bulanan', salaryAmount: '' }],
   dailyFood: '', dailyCigarette: '',
   electricity: '', wifi: '', lpg: '', arisan: '', spp: '', pocketMoneyDaily: '', gasWeekly: '',
-  motorcycleTax: '', carTax: '', ukt: '',
+  motorcycleTax: '', carTax: '', ukt: '', eidExpense: '', schoolSupplies: '', otherAnnual: '',
   businessType: 'Tidak Ada',
   padiSeasons: '2', padiSacks: '', padiPrice: '', padiFertilizer: '', padiSeed: '', padiMedicine: '', padiTractor: '', padiHarvest: '', padiPlanting: '', padiRent: '', padiTax: '',
   businessOmset: '', mebelOmsetType: 'Bulanan', mebelWorkers: '', prodCost1: '', prodCost2: '', prodCost3: '', opCost1: '', opCost2: '', nonOpCost1: '', nonOpCost2: ''
@@ -45,13 +45,13 @@ export default function App() {
 
   // Step 2
   const getWeeklyConsumption = () => (parseNum(formData.dailyFood) + parseNum(formData.dailyCigarette)) * 7;
-  const annualConsumption = getWeeklyConsumption() * 52;
+  const monthlyConsumption = getWeeklyConsumption() * 4;
 
   // Step 3
   const getMonthlyRoutine = () => parseNum(formData.electricity) + parseNum(formData.wifi) + parseNum(formData.lpg) + (parseNum(formData.arisan) * 4) + parseNum(formData.spp) + (parseNum(formData.pocketMoneyDaily) * 30) + (parseNum(formData.gasWeekly) * 4);
 
   // Step 4
-  const getAnnualPersonal = () => (getMonthlyRoutine() * 12) + parseNum(formData.motorcycleTax) + parseNum(formData.carTax) + parseNum(formData.ukt);
+  const getAnnualPersonal = () => parseNum(formData.motorcycleTax) + parseNum(formData.carTax) + parseNum(formData.ukt) + parseNum(formData.eidExpense) + parseNum(formData.schoolSupplies) + parseNum(formData.otherAnnual);
 
   // Step 5
   const getBusinessFinancials = () => {
@@ -79,51 +79,77 @@ export default function App() {
   const businessData = getBusinessFinancials();
   const totalPemasukanTahunan = annualIncome + businessData.annualOmset;
   // Sesuai instruksi: Pengeluaran Tahunan = (Bulanan * 12) + Pajak Motor + Mobil + UKT + Pengeluaran Usaha (Tanpa Konsumsi Mingguan)
-  const totalPengeluaranKeseluruhan = getAnnualPersonal() + businessData.annualExpense;
+  const totalPengeluaranKeseluruhan = (getMonthlyRoutine() * 12) + getAnnualPersonal() + businessData.annualExpense;
   const neraca = totalPemasukanTahunan - totalPengeluaranKeseluruhan;
 
   const handleDownload = () => {
-    let csv = "LAPORAN SENSUS EKONOMI TERPADU;\n\n";
-    csv += "KATEGORI;NILAI\n";
-    csv += "--- INFORMASI UMUM ---;\n";
-    csv += `Anggota Keluarga (Bekerja);${formData.workers.map(w => w.name || 'Tanpa Nama').join(' & ')}\n`;
-    csv += `Sektor Usaha;${formData.businessType}\n\n`;
+    const formatRp = (angka) => `Rp ${angka.toLocaleString('id-ID')}`;
+    const tanggal = new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
-    csv += "--- RINCIAN PEMASUKAN TAHUNAN ---;\n";
+    let csv = "LAPORAN SENSUS EKONOMI TERPADU;;\n";
+    csv += `Tanggal Cetak;;${tanggal}\n\n`;
+
+    csv += "KATEGORI;DESKRIPSI;NILAI\n";
+    csv += "==============================;==============================;==============================\n";
+
+    csv += "1. INFORMASI UMUM;;\n";
+    csv += `;Anggota Keluarga (Bekerja);${formData.workers.map(w => w.name || 'Tanpa Nama').join(' & ')}\n`;
+    csv += `;Sektor Usaha;${formData.businessType}\n\n`;
+
+    csv += "2. RINCIAN PEMASUKAN TAHUNAN;;\n";
     formData.workers.forEach((w, idx) => {
       const amount = parseNum(w.salaryAmount);
       let annual = amount;
       if (w.salaryType === 'Harian') annual = amount * 24 * 12;
       else if (w.salaryType === 'Mingguan') annual = amount * 4 * 12;
       else annual = amount * 12;
-      csv += `Gaji ${w.name || `Anggota ${idx + 1}`} (${w.salaryType});${annual}\n`;
+      csv += `;Gaji ${w.name || `Anggota ${idx + 1}`} (${w.salaryType});${formatRp(annual)}\n`;
     });
-    csv += `Total Gaji Tahunan Keluarga;${annualIncome}\n`;
+    csv += `;Total Gaji Tahunan Keluarga;${formatRp(annualIncome)}\n`;
     if (formData.businessType !== 'Tidak Ada') {
-      csv += `Total Omset Usaha Tahunan;${businessData.annualOmset}\n`;
+      csv += `;Total Omset Usaha Tahunan;${formatRp(businessData.annualOmset)}\n`;
     }
-    csv += `TOTAL PEMASUKAN KOTOR;${totalPemasukanTahunan}\n\n`;
+    csv += "------------------------------;------------------------------;------------------------------\n";
+    csv += `;TOTAL PEMASUKAN KOTOR;${formatRp(totalPemasukanTahunan)}\n\n`;
 
-    csv += "--- RINCIAN PENGELUARAN TAHUNAN ---;\n";
-    csv += `Total Pengeluaran Rutin & Pribadi;${getAnnualPersonal()}\n`;
+    csv += "3. RINCIAN PENGELUARAN RUTIN BULANAN;;\n";
+    csv += `;Listrik;${formatRp(parseNum(formData.electricity))}\n`;
+    csv += `;WiFi / Paket Data;${formatRp(parseNum(formData.wifi))}\n`;
+    csv += `;LPG;${formatRp(parseNum(formData.lpg))}\n`;
+    csv += `;Arisan (Per Bulan);${formatRp(parseNum(formData.arisan) * 4)}\n`;
+    csv += `;SPP Anak;${formatRp(parseNum(formData.spp))}\n`;
+    csv += `;Uang Saku (Per Bulan);${formatRp(parseNum(formData.pocketMoneyDaily) * 30)}\n`;
+    csv += `;Bensin (Per Bulan);${formatRp(parseNum(formData.gasWeekly) * 4)}\n`;
+    csv += "------------------------------;------------------------------;------------------------------\n";
+    csv += `;TOTAL RUTIN BULANAN;${formatRp(getMonthlyRoutine())}\n\n`;
+
+    csv += "4. RINCIAN PENGELUARAN TAHUNAN;;\n";
+    if (parseNum(formData.motorcycleTax) > 0) csv += `;Pajak Motor;${formatRp(parseNum(formData.motorcycleTax))}\n`;
+    if (parseNum(formData.carTax) > 0) csv += `;Pajak Mobil;${formatRp(parseNum(formData.carTax))}\n`;
+    if (parseNum(formData.ukt) > 0) csv += `;UKT / Pendidikan;${formatRp(parseNum(formData.ukt))}\n`;
+    if (parseNum(formData.eidExpense) > 0) csv += `;Biaya Lebaran;${formatRp(parseNum(formData.eidExpense))}\n`;
+    if (parseNum(formData.schoolSupplies) > 0) csv += `;Perlengkapan Sekolah;${formatRp(parseNum(formData.schoolSupplies))}\n`;
+    if (parseNum(formData.otherAnnual) > 0) csv += `;Lain-lain;${formatRp(parseNum(formData.otherAnnual))}\n`;
     if (formData.businessType !== 'Tidak Ada') {
-      csv += `Total Biaya Operasional & Produksi Usaha;${businessData.annualExpense}\n`;
+      csv += `;Total Biaya Operasional & Produksi Usaha;${formatRp(businessData.annualExpense)}\n`;
     }
-    csv += `TOTAL PENGELUARAN KESELURUHAN;${totalPengeluaranKeseluruhan}\n\n`;
+    csv += "------------------------------;------------------------------;------------------------------\n";
+    csv += `;TOTAL PENGELUARAN KESELURUHAN (Termasuk Bulanan x 12);${formatRp(totalPengeluaranKeseluruhan)}\n\n`;
 
-    csv += "--- CATATAN TAMBAHAN ---;\n";
-    csv += `Konsumsi Mingguan (Makan & Rokok);${getWeeklyConsumption()}\n\n`;
+    csv += "5. CATATAN TAMBAHAN;;\n";
+    csv += `;Konsumsi Mingguan (Makan & Rokok);${formatRp(getWeeklyConsumption())} (Tidak masuk neraca bulanan)\n\n`;
 
-    csv += "--- HASIL NERACA ---;\n";
-    csv += `STATUS NERACA;${neraca >= 0 ? 'SURPLUS (UNTUNG)' : 'DEFISIT (RUGI)'}\n`;
-    csv += `TOTAL BERSIH (NETTO);${neraca}\n`;
+    csv += "6. HASIL NERACA;;\n";
+    csv += `;STATUS NERACA;${neraca >= 0 ? 'SURPLUS (UNTUNG)' : 'DEFISIT (RUGI)'}\n`;
+    csv += "==============================;==============================;==============================\n";
+    csv += `;TOTAL BERSIH (NETTO);${formatRp(neraca)}\n`;
 
     // Tambahkan BOM agar Excel mendeteksi UTF-8 dengan benar
     const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    link.setAttribute("download", "Laporan_Sensus_Ekonomi.csv");
+    link.setAttribute("download", `Laporan_Sensus_Ekonomi_${new Date().getTime()}.csv`);
     document.body.appendChild(link); link.click(); document.body.removeChild(link);
   };
 
@@ -210,7 +236,7 @@ export default function App() {
               </div>
               <div className={subBoxClass}>
                 <div className={subTextClass}><span>Total Mingguan</span><span className={subValueClass}>Rp {getWeeklyConsumption().toLocaleString('id-ID')}</span></div>
-                <div className={subTextClass}><span>Estimasi Tahunan</span><span className={subValueClass}>Rp {annualConsumption.toLocaleString('id-ID')}</span></div>
+                <div className={subTextClass}><span>Estimasi Bulanan</span><span className={subValueClass}>Rp {monthlyConsumption.toLocaleString('id-ID')}</span></div>
               </div>
             </motion.div>
           )}
@@ -249,6 +275,9 @@ export default function App() {
                 <div><label className={labelClass}>Pajak Motor</label><input type="number" name="motorcycleTax" value={formData.motorcycleTax} onChange={handleChange} className={inputClass} /></div>
                 <div><label className={labelClass}>Pajak Mobil</label><input type="number" name="carTax" value={formData.carTax} onChange={handleChange} className={inputClass} /></div>
                 <div><label className={labelClass}>UKT / Pendidikan</label><input type="number" name="ukt" value={formData.ukt} onChange={handleChange} className={inputClass} /></div>
+                <div><label className={labelClass}>Biaya Lebaran</label><input type="number" name="eidExpense" value={formData.eidExpense} onChange={handleChange} className={inputClass} /></div>
+                <div><label className={labelClass}>Perlengkapan Sekolah</label><input type="number" name="schoolSupplies" value={formData.schoolSupplies} onChange={handleChange} className={inputClass} /></div>
+                <div><label className={labelClass}>Lain-lain (Tahunan)</label><input type="number" name="otherAnnual" value={formData.otherAnnual} onChange={handleChange} className={inputClass} /></div>
               </div>
               <div className={subBoxClass}>
                 <div className={subTextClass}><span>Total Tahunan Pribadi</span><span className={subValueClass}>Rp {getAnnualPersonal().toLocaleString('id-ID')}</span></div>
@@ -337,9 +366,10 @@ export default function App() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
                 <div className="bg-slate-50 border border-slate-200 p-5 rounded-2xl"><div className="text-xs font-bold text-slate-500 uppercase mb-1">Gaji Tahunan</div><div className="text-xl font-extrabold text-slate-800">Rp {annualIncome.toLocaleString('id-ID')}</div></div>
                 <div className="bg-slate-50 border border-slate-200 p-5 rounded-2xl"><div className="text-xs font-bold text-slate-500 uppercase mb-1">Omset Usaha</div><div className="text-xl font-extrabold text-emerald-600">Rp {businessData.annualOmset.toLocaleString('id-ID')}</div></div>
-                <div className="bg-slate-50 border border-slate-200 p-5 rounded-2xl"><div className="text-xs font-bold text-slate-500 uppercase mb-1">Rutin Pribadi (Tahunan)</div><div className="text-xl font-extrabold text-rose-600">Rp {getAnnualPersonal().toLocaleString('id-ID')}</div></div>
+                <div className="bg-slate-50 border border-slate-200 p-5 rounded-2xl"><div className="text-xs font-bold text-slate-500 uppercase mb-1">Rutin Pribadi (Tahunan)</div><div className="text-xl font-extrabold text-rose-600">Rp {(getMonthlyRoutine() * 12).toLocaleString('id-ID')}</div></div>
+                <div className="bg-slate-50 border border-slate-200 p-5 rounded-2xl"><div className="text-xs font-bold text-slate-500 uppercase mb-1">Pajak & Lainnya</div><div className="text-xl font-extrabold text-rose-600">Rp {getAnnualPersonal().toLocaleString('id-ID')}</div></div>
                 <div className="bg-slate-50 border border-slate-200 p-5 rounded-2xl"><div className="text-xs font-bold text-slate-500 uppercase mb-1">Pengeluaran Usaha</div><div className="text-xl font-extrabold text-rose-600">Rp {businessData.annualExpense.toLocaleString('id-ID')}</div></div>
-                <div className="bg-slate-50 border border-slate-200 p-5 rounded-2xl sm:col-span-2"><div className="text-xs font-bold text-slate-500 uppercase mb-1">Konsumsi Mingguan (Tidak Masuk Neraca)</div><div className="text-xl font-extrabold text-slate-600">Rp {getWeeklyConsumption().toLocaleString('id-ID')}</div></div>
+                <div className="bg-slate-50 border border-slate-200 p-5 rounded-2xl"><div className="text-xs font-bold text-slate-500 uppercase mb-1">Konsumsi Mingguan (Tidak Masuk Neraca)</div><div className="text-xl font-extrabold text-slate-600">Rp {getWeeklyConsumption().toLocaleString('id-ID')}</div></div>
               </div>
 
               <div className={`p-6 rounded-3xl mb-8 ${neraca >= 0 ? 'bg-gradient-to-br from-emerald-500 to-teal-600' : 'bg-gradient-to-br from-rose-500 to-red-600'} text-white shadow-xl`}>
